@@ -460,6 +460,8 @@ def do_today(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
                 for record in rlist:
                     if record["submitTime"] < today:
                         break
+                    if record["problem"]["type"] == "U" or record["problem"]["type"] == "T":
+                        continue
                     points += diff2points[record["problem"]["difficulty"]]
                     tot += 1
                 allpoints[qq] = points
@@ -526,6 +528,8 @@ def do_today(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
     for record in rlist:
         if record["submitTime"] < today:
             break
+        if record["problem"]["type"] == "U" or record["problem"]["type"] == "T":
+            continue
         ret += f"通过 {record['problem']['pid']} | 难度 {diffs[record['problem']['difficulty']]} | +{diff2points[record['problem']['difficulty']]}\n"
         points += diff2points[record["problem"]["difficulty"]]
         tot += 1
