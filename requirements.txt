@@ -1,0 +1,2 @@
+miraicle~=0.3.10
+requests~=2.31.0
