@@ -1,5 +1,6 @@
 import json
 import random
+
 import miraicle
 import requests
 
@@ -8,6 +9,7 @@ with open(r"config/admin.json", "r", encoding='utf-8') as f:
 
 with open(r"config/superadmin.json", "r", encoding='utf-8') as f:
     superadmin = json.load(f)["list"]
+
 
 @miraicle.Mirai.receiver('GroupMessage')
 def essentials(bot: miraicle.Mirai, msg: miraicle.GroupMessage):

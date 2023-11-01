@@ -1,5 +1,3 @@
-import json
-import random
 import miraicle
 import requests
 

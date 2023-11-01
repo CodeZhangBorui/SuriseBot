@@ -5,9 +5,10 @@ import miraicle
 with open(r"config/admin.json", "r", encoding='utf-8') as f:
     admin = json.load(f)["list"]
 
+
 @miraicle.Mirai.filter('GroupSwitchFilter')
 def switcher(bot: miraicle.Mirai, msg: miraicle.GroupMessage, flt: miraicle.GroupSwitchFilter):
-    msgchain = msg.plain.split(' ') 
+    msgchain = msg.plain.split(' ')
     if msgchain[0] == "/help":
         ret = ""
         for feature in flt.funcs_info(msg.group):
