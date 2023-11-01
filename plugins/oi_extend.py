@@ -30,7 +30,7 @@ with open(r"data/rating.json", "r", encoding="utf-8") as f:
     rating = json.load(f)
 
 with open(r"config/admin.json", "r", encoding='utf-8') as f:
-    admin = json.load(f)["list"].extend([3496045896])
+    admin = json.load(f)["list"]
 
 
 # Define basic functions
@@ -582,7 +582,7 @@ def oi_extend(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
             with open(r"data/rating.json", "r", encoding="utf-8") as f:
                 rating = json.load(f)
             with open(r"config/admin.json", "r", encoding='utf-8') as f:
-                admin = json.load(f)["list"].extend([3496045896])
+                admin = json.load(f)["list"]
             bot.send_group_msg(
                 group=msg.group,
                 msg="已重新加载所有数据和配置",

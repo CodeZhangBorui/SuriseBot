@@ -4,7 +4,10 @@ import miraicle
 import requests
 
 with open(r"config/admin.json", "r", encoding='utf-8') as f:
-    admin = json.load(f)["list"].extend([3496045896])
+    admin = json.load(f)["list"]
+
+with open(r"config/superadmin.json", "r", encoding='utf-8') as f:
+    superadmin = json.load(f)["list"]
 
 @miraicle.Mirai.receiver('GroupMessage')
 def essentials(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
@@ -39,10 +42,22 @@ def essentials(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
             miraicle.Plain(ret),
         ], quote=msg.id)
     if message[0] == "/admin":
-        if msg.sender.id not in admin:
+        if msg.sender not in admin:
             bot.send_group_msg(group=msg.group, msg=[
                 miraicle.Plain("权限不足"),
             ], quote=msg.id)
+            return
+        if len(message) < 2:
+            bot.send_group_msg(group=msg.group, msg=[
+                miraicle.Plain("参数错误：/admin <add|del> @member"),
+            ])
+        if message[1] == "list":
+            ret = "管理员列表：\n"
+            for i in admin:
+                ret += f"- {i}\n"
+            bot.send_group_msg(group=msg.group, msg=[
+                miraicle.Plain(ret),
+            ])
             return
         if len(message) < 3:
             bot.send_group_msg(group=msg.group, msg=[
@@ -58,7 +73,9 @@ def essentials(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
             with open(r"config/admin.json", "w", encoding='utf-8') as f:
                 json.dump({"list": admin}, f)
             bot.send_group_msg(group=msg.group, msg=[
-                miraicle.Plain("添加成功"),
+                miraicle.Plain("添加管理员 "),
+                miraicle.At(msg.chain[1].qq),
+                miraicle.Plain(" 成功"),
             ])
             return
         if message[1] == "del":
@@ -67,11 +84,18 @@ def essentials(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
                     miraicle.Plain("参数错误：/admin <add|del> @member"),
                 ])
                 return
+            if msg.chain[1].qq in superadmin:
+                bot.send_group_msg(group=msg.group, msg=[
+                    miraicle.Plain("无法删除此管理员：请编辑文件安全修改管理员"),
+                ])
+                return
             admin.remove(msg.chain[1].qq)
             with open(r"config/admin.json", "w", encoding='utf-8') as f:
                 json.dump({"list": admin}, f)
             bot.send_group_msg(group=msg.group, msg=[
-                miraicle.Plain("删除成功"),
+                miraicle.Plain("删除管理员 "),
+                miraicle.At(msg.chain[1].qq),
+                miraicle.Plain(" 成功"),
             ])
             return
     if message[0] == "/about":
