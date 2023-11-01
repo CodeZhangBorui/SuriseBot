@@ -2,10 +2,8 @@ import json
 
 import miraicle
 
-# with open(r"config/admin.json", "r", encoding='utf-8') as f:
-#     admin = json.load(f)
-
-admin = [3496045896]
+with open(r"config/admin.json", "r", encoding='utf-8') as f:
+    admin = json.load(f)["list"].extend([3496045896])
 
 @miraicle.Mirai.filter('GroupSwitchFilter')
 def switcher(bot: miraicle.Mirai, msg: miraicle.GroupMessage, flt: miraicle.GroupSwitchFilter):

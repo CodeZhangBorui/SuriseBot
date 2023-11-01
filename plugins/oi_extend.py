@@ -15,6 +15,10 @@ LoginCredit = {
 }
 DefaultUA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36 Edg/118.0.2088.57"
 ProcessLocker = False
+TodayLocker = {
+    "status": False,
+    "timestamp": 0,
+}
 
 with open(r"data/accounts.json", "r", encoding="utf-8") as f:
     accounts = json.load(f)
@@ -25,8 +29,8 @@ with open(r"data/duel.json", "r", encoding="utf-8") as f:
 with open(r"data/rating.json", "r", encoding="utf-8") as f:
     rating = json.load(f)
 
-with open(r"data/privacy.json", "r", encoding="utf-8") as f:
-    privacyset = json.load(f)
+with open(r"config/admin.json", "r", encoding='utf-8') as f:
+    admin = json.load(f)["list"].extend([3496045896])
 
 
 # Define basic functions
@@ -108,10 +112,6 @@ def do_duel(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
                 rating[str(msg.sender)] = 1400
                 with open(r"data/rating.json", "w", encoding="utf-8") as f:
                     json.dump(rating, f)
-            if str(msg.sender) not in privacyset:
-                privacyset[str(msg.sender)] = "open"
-                with open(r"data/privacy.json", "w", encoding="utf-8") as f:
-                    json.dump(privacyset, f)
             bot.send_group_msg(
                 group=msg.group,
                 msg="绑定成功，你的洛谷用户名为 " + res["currentData"]["user"]["name"],
@@ -443,6 +443,21 @@ def do_today(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
             msg="OI-Extend Today Module v1.0.0\n键入 /today @群成员 获取群成员今日做题情况",
         )
         return
+    if msgchain[1] in ["lock"]:
+        if msg.sender not in admin:
+            bot.send_group_msg(group=msg.group, msg="权限不足")
+            return
+        TodayLocker["status"] = True
+        TodayLocker["timestamp"] = int(time.time())
+        bot.send_group_msg(group=msg.group, msg="封榜操作成功")
+        return
+    if msgchain[1] in ["unlock"]:
+        if msg.sender not in admin:
+            bot.send_group_msg(group=msg.group, msg="权限不足")
+            return
+        TodayLocker["status"] = False
+        bot.send_group_msg(group=msg.group, msg="解除封榜操作成功")
+        return
     if msgchain[1] in ["report", "rp"]:
         global ProcessLocker
         ProcessLocker = True
@@ -460,6 +475,8 @@ def do_today(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
                 for record in rlist:
                     if record["submitTime"] < today:
                         break
+                    if TodayLocker["status"] is True and record["submitTime"] > TodayLocker["timestamp"]:
+                        continue
                     if record["problem"]["type"] == "U" or record["problem"]["type"] == "T":
                         continue
                     points += diff2points[record["problem"]["difficulty"]]
@@ -470,11 +487,13 @@ def do_today(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
                 time.sleep(2)
             rank = sorted(allpoints.items(), key=lambda x: x[1], reverse=True)
             ret = "今日做题情况报告：\n"
+            if TodayLocker["status"]:
+                ret += f"报告生成时间：{time.strftime('%m-%d %H:%M', time.localtime(TodayLocker['timestamp']))}（已封榜）\n\n"
+            else:
+                ret += f"报告生成时间：{time.strftime('%m-%d %H:%M', time.localtime())}\n\n"
             now = 1
             for rk in rank:
-                if privacyset[rk[0]] == "restricted":
-                    ret += f"{now} | {accounts[rk[0]]} | 隐私模式无法查看\n"
-                elif rk[1] == 0:
+                if rk[1] == 0:
                     ret += f"{now} | {accounts[rk[0]]} | 未做题\n"
                 else:
                     ret += f"{now} | {accounts[rk[0]]} | {rk[1]}\n"
@@ -498,19 +517,13 @@ def do_today(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
             msg="对方还没有绑定账号，输入 /duel bind <洛谷 UID> 绑定账号",
         )
         return
-    if (
-            str(msg.chain[1].qq) in privacyset
-            and privacyset[str(msg.chain[1].qq)] == "restricted"
-            and msg.sender != msg.chain[1].qq
-    ):
-        bot.send_group_msg(
-            group=msg.group,
-            msg="对方设置了隐私模式，你无法查看对方的做题情况。只有对方自己可查询",
-        )
-        return
     today = get_today_timestamp()
     rlist = get_record_list(accounts[str(msg.chain[1].qq)])
     ret = f"{accounts[str(msg.chain[1].qq)]} 的今日做题情况：\n"
+    if TodayLocker["status"]:
+        ret += f"报告生成时间：{time.strftime('%m-%d %H:%M', time.localtime(TodayLocker['timestamp']))}（已封榜）\n\n"
+    else:
+        ret += f"报告生成时间：{time.strftime('%m-%d %H:%M', time.localtime())}\n\n"
     tot = 0
     diffs = [
         "暂未评定",
@@ -528,6 +541,8 @@ def do_today(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
     for record in rlist:
         if record["submitTime"] < today:
             break
+        if TodayLocker["status"] is True and record["submitTime"] > TodayLocker["timestamp"]:
+            continue
         if record["problem"]["type"] == "U" or record["problem"]["type"] == "T":
             continue
         ret += f"通过 {record['problem']['pid']} | 难度 {diffs[record['problem']['difficulty']]} | +{diff2points[record['problem']['difficulty']]}\n"
@@ -559,15 +574,15 @@ def oi_extend(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
             return
         if msgchain[1] == "reload":
             # Reload all data and config from files
-            global accounts, duelPool, rating, privacyset
+            global accounts, duelPool, rating, admin
             with open(r"data/accounts.json", "r", encoding="utf-8") as f:
                 accounts = json.load(f)
             with open(r"data/duel.json", "r", encoding="utf-8") as f:
                 duelPool = json.load(f)["duelPool"]
             with open(r"data/rating.json", "r", encoding="utf-8") as f:
                 rating = json.load(f)
-            with open(r"data/privacy.json", "r", encoding="utf-8") as f:
-                privacyset = json.load(f)
+            with open(r"config/admin.json", "r", encoding='utf-8') as f:
+                admin = json.load(f)["list"].extend([3496045896])
             bot.send_group_msg(
                 group=msg.group,
                 msg="已重新加载所有数据和配置",

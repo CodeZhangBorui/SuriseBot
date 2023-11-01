@@ -3,6 +3,8 @@ import random
 import miraicle
 import requests
 
+with open(r"config/admin.json", "r", encoding='utf-8') as f:
+    admin = json.load(f)["list"].extend([3496045896])
 
 @miraicle.Mirai.receiver('GroupMessage')
 def essentials(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
@@ -36,6 +38,42 @@ def essentials(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
         bot.send_group_msg(group=msg.group, msg=[
             miraicle.Plain(ret),
         ], quote=msg.id)
+    if message[0] == "/admin":
+        if msg.sender.id not in admin:
+            bot.send_group_msg(group=msg.group, msg=[
+                miraicle.Plain("权限不足"),
+            ], quote=msg.id)
+            return
+        if len(message) < 3:
+            bot.send_group_msg(group=msg.group, msg=[
+                miraicle.Plain("参数错误：/admin <add|del> @member"),
+            ])
+        if message[1] == "add":
+            if type(msg.chain[1]) != miraicle.message.At:
+                bot.send_group_msg(group=msg.group, msg=[
+                    miraicle.Plain("参数错误：/admin <add|del> @member"),
+                ])
+                return
+            admin.append(msg.chain[1].qq)
+            with open(r"config/admin.json", "w", encoding='utf-8') as f:
+                json.dump({"list": admin}, f)
+            bot.send_group_msg(group=msg.group, msg=[
+                miraicle.Plain("添加成功"),
+            ])
+            return
+        if message[1] == "del":
+            if type(msg.chain[1]) != miraicle.message.At:
+                bot.send_group_msg(group=msg.group, msg=[
+                    miraicle.Plain("参数错误：/admin <add|del> @member"),
+                ])
+                return
+            admin.remove(msg.chain[1].qq)
+            with open(r"config/admin.json", "w", encoding='utf-8') as f:
+                json.dump({"list": admin}, f)
+            bot.send_group_msg(group=msg.group, msg=[
+                miraicle.Plain("删除成功"),
+            ])
+            return
     if message[0] == "/about":
         bot.send_group_msg(group=msg.group, msg=[
             miraicle.Plain("Surise Bot Core v20231029 by CodeZhangBorui"),
