@@ -1,4 +1,5 @@
 import json
+import math
 import random
 import time
 
@@ -484,6 +485,8 @@ def do_today(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
                 allpoints[qq] = points
                 now += 1
                 print(f"Generating report, completed {now}/{len(accounts)}")
+                bot.send_group_msg(group=msg.group,
+                                   msg=f"正在生成报告，已完成 {now}/{len(accounts)} ({math.floor(now / len(accounts) * 100)}%)")
                 time.sleep(2)
             rank = sorted(allpoints.items(), key=lambda x: x[1], reverse=True)
             ret = "今日做题情况报告：\n"
