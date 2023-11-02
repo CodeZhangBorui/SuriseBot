@@ -496,7 +496,14 @@ def do_today(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
                 if rk[1] == 0:
                     ret += f"{now} | {accounts[rk[0]]} | 未做题\n"
                 else:
-                    ret += f"{now} | {accounts[rk[0]]} | {rk[1]}\n"
+                    if now == 1:
+                        ret += f"{now} | {accounts[rk[0]]} | {rk[1]} 🥇\n"
+                    elif now == 2:
+                        ret += f"{now} | {accounts[rk[0]]} | {rk[1]} 🥈\n"
+                    elif now == 3:
+                        ret += f"{now} | {accounts[rk[0]]} | {rk[1]} 🥉\n"
+                    else:
+                        ret += f"{now} | {accounts[rk[0]]} | {rk[1]}\n"
                 now += 1
             ProcessLocker = False
             bot.send_group_msg(group=msg.group, msg=ret)
