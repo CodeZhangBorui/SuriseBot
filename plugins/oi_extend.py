@@ -545,7 +545,7 @@ def do_today(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
         "省选/NOI-",
         "NOI/NOI+/CTSC",
     ]
-    diff2points = [3, 1, 1, 2, 3, 5, 7, 10]
+    diff2points = [3, 0, 1, 2, 3, 5, 7, 10]
     points = 0
     rlist = rlist_unique(rlist)
     for record in rlist:
