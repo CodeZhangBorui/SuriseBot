@@ -21,71 +21,70 @@ TodayLocker = {
     "timestamp": 0,
 }
 
-with open(r"data/accounts.json", "r", encoding="utf-8") as f:
+with open("data/accounts.json", "r", encoding="utf-8") as f:
     accounts = json.load(f)
 
-with open(r"data/duel.json", "r", encoding="utf-8") as f:
+with open("data/duel.json", "r", encoding="utf-8") as f:
     duelPool = json.load(f)["duelPool"]
 
-with open(r"data/rating.json", "r", encoding="utf-8") as f:
+with open("data/rating.json", "r", encoding="utf-8") as f:
     rating = json.load(f)
 
-with open(r"config/admin.json", "r", encoding='utf-8') as f:
+with open("config/admin.json", "r", encoding='utf-8') as f:
     admin = json.load(f)["list"]
 
 
 # Define basic functions
 def get_today_timestamp():
     import time
-
     return int(time.time()) - int(time.time()) % 86400 - 28000
 
 
 def get_record_list(uid, pid=None):
+    print(f"Getting record list of {uid}", end="")
     if pid is None:
-        url = "https://www.luogu.com.cn/record/list?_contentOnly&user=" + uid
+        url = f"https://www.luogu.com.cn/record/list?_contentOnly&user={uid}"
     else:
-        url = (
-                "https://www.luogu.com.cn/record/list?_contentOnly&user="
-                + uid
-                + "&pid="
-                + pid
-        )
+        url = f"https://www.luogu.com.cn/record/list?_contentOnly&user={uid}&pid={pid}"
+        print(f" for {pid}", end="")
     rlist = []
     for i in range(3):
-        res = requests.get(
-            url + "&page=" + str(i + 1),
-            headers={
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-            },
-            cookies=LoginCredit,
-        )
-        rlist.extend(res.json()["currentData"]["records"]["result"])
+        try:
+            res = requests.get(
+                f"{url}&page={i + 1}",
+                headers={
+                    "User-Agent": DefaultUA,
+                },
+                cookies=LoginCredit,
+            ).json()
+        except:
+            print(f"Failed to get [{url}&page={i + 1}], page not found?")
+        rlist.extend(res["currentData"]["records"]["result"])
+    print(f" | OK {len(rlist)} record(s)")
     return rlist
 
 
-def elo_rating(Ra, Rb, Sa):
-    K = 128
-    Ea = 1 / (1 + 10 ** ((Rb - Ra) / 400))
-    Ra_ = Ra + K * (Sa - Ea)
-    return Ra_
+def elo_rating(ra, rb, sa):
+    k = 128
+    ea = 1 / (1 + 10 ** ((rb - ra) / 400))
+    ra_ = ra + k * (sa - ea)
+    return ra_
 
 
 def rlist_unique(rlist):
-    uniqued = []
+    print("Unique and filter AC records", end="")
+    unique = []
     seen_pids = set()
     for item in rlist:
         if item["status"] == 12 and item["problem"]["pid"] not in seen_pids:
             seen_pids.add(item["problem"]["pid"])
-            uniqued.append(item)
-    return uniqued
+            unique.append(item)
+    print(f" | OK {len(unique)} record(s)")
+    return unique
 
 
 def get_counterpart(sender, duel):
-    if sender == duel["sender"]:
-        return duel["receiver"]
-    else:
-        return duel["sender"]
+    return duel["receiver"] if sender == duel["sender"] else duel["sender"]
 
 
 # Define modules
@@ -101,9 +100,10 @@ def do_duel(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
         if len(msgchain) < 3:
             bot.send_group_msg(group=msg.group, msg="参数错误：/duel bind <洛谷 UID>")
             return
+        print(f"Binding @{msg.sender} to {msgchain[2]}", end="")
         res = requests.get(
-            f"https://www.luogu.com.cn/user/{msgchain[2]}?_contentOnly",
-            headers={"User-Agent": DefaultUA},
+            f"https://www.luogu.com.cn/user/{msgchain[2]}",
+            headers={"User-Agent": DefaultUA, "x-luogu-type": "content-only"},
         ).json()
         if str(res["currentData"]["user"]["introduction"]).startswith(str(msg.sender)):
             accounts[str(msg.sender)] = res["currentData"]["user"]["name"]
@@ -113,19 +113,21 @@ def do_duel(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
                 rating[str(msg.sender)] = 1400
                 with open(r"data/rating.json", "w", encoding="utf-8") as f:
                     json.dump(rating, f)
+            print(f" | OK Username is {res['currentData']['user']['name']}")
             bot.send_group_msg(
                 group=msg.group,
                 msg="绑定成功，你的洛谷用户名为 " + res["currentData"]["user"]["name"],
             )
         else:
-            print(f"User current introduction:\n{res['currentData']['user']['introduction']}")
+            print(f" | Unaccepted user introduction:\n{res['currentData']['user']['introduction']}")
             bot.send_group_msg(
                 group=msg.group,
                 msg=f"你正在绑定账号 {msgchain[2]}，请在个人介绍开头处顶格填入你的 QQ 号，然后再次输入 /duel bind <洛谷 UID> 完成绑定。绑定完成后，你可以将添加的 QQ 号删除。",
             )
         return
     if msgchain[1] in ["list", "ls", "lis", "lt"]:
-        ret = "当前正在进行的对战：\n"
+        print(f"Listing duel pool | OK {len(duelPool)} Duel(s)")
+        ret = "当前正在进行的对战：\n\n"
         now = time.time()
         for duel in duelPool:
             hours = int((now - duel["timestamp"]) / 3600)
@@ -139,6 +141,7 @@ def do_duel(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
         bot.send_group_msg(group=msg.group, msg=ret)
         return
     if msgchain[1] in ["rank", "rk", "rak"]:
+        print(f"Listing duel rank | OK {len(rating)} Rating(s)")
         rank = sorted(rating.items(), key=lambda x: x[1], reverse=True)
         ret = "Duel Rating 排行榜：\n"
         now = 1
@@ -159,6 +162,7 @@ def do_duel(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
             return
         with open(r"data/cfrate.json", "r", encoding="utf-8") as f:
             problem = random.choice(json.load(f)[msgchain[2]])
+        print(f"Choose a problem for @{msg.sender} | OK {problem['name']}")
         bot.send_group_msg(
             group=msg.group,
             msg=[
@@ -214,6 +218,8 @@ def do_duel(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
         duelPool.append(duel)
         with open(r"data/duel.json", "w", encoding="utf-8") as f:
             json.dump({"duelPool": duelPool}, f)
+        print(
+            f"New duel invitation created:\nSender | Receiver : {duel['sender']} | {duel['receiver']}\nProblem: {duel['problem']}")
         bot.send_group_msg(
             group=msg.group,
             msg=[
@@ -226,6 +232,8 @@ def do_duel(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
     if msgchain[1] in ["accept"]:
         for duel in duelPool:
             if duel["receiver"] == msg.sender and duel["status"] == 1:
+                print(
+                    f"Duel accepted:\nSender | Receiver : {duel['sender']} | {duel['receiver']}\nProblem: {duel['problem']}")
                 duel["status"] = 2
                 duel["timestamp"] = int(time.time())
                 with open(r"data/duel.json", "w", encoding="utf-8") as f:
@@ -243,6 +251,8 @@ def do_duel(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
     if msgchain[1] in ["reject"]:
         for duel in duelPool:
             if duel["receiver"] == msg.sender and duel["status"] == 1:
+                print(
+                    f"Duel rejected:\nSender | Receiver : {duel['sender']} | {duel['receiver']}\nProblem: {duel['problem']}")
                 duelPool.remove(duel)
                 with open(r"data/duel.json", "w", encoding="utf-8") as f:
                     json.dump({"duelPool": duelPool}, f)
@@ -286,6 +296,8 @@ def do_duel(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
                         now = time.time()
                         hours = int((now - duel["timestamp"]) / 3600)
                         minutes = int((now - duel["timestamp"]) / 60 - hours * 60)
+                        print(
+                            f"Duel finished:\nSender | Receiver : {duel['sender']} | {duel['receiver']}\nProblem: {duel['problem']}\nTime: {hours}h {minutes}m\nRating: {elo_a} | {elo_b}")
                         bot.send_group_msg(
                             group=msg.group,
                             msg=[
@@ -327,6 +339,8 @@ def do_duel(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
                         duel.remove("operator")
                         with open(r"data/duel.json", "w", encoding="utf-8") as f:
                             json.dump({"duelPool": duelPool}, f)
+                        print(
+                            f"New problem for the duel:\nSender | Receiver : {duel['sender']} | {duel['receiver']}\nProblem: {duel['problem']}")
                         bot.send_group_msg(
                             group=msg.group,
                             msg=[
@@ -368,6 +382,8 @@ def do_duel(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
     if msgchain[1] in ["giveup"]:
         for duel in duelPool:
             if duel["sender"] == msg.sender or duel["receiver"] == msg.sender:
+                print(
+                    f"Duel given up:\nSender | Receiver : {duel['sender']} | {duel['receiver']}\nProblem: {duel['problem']}")
                 duelPool.remove(duel)
                 with open(r"data/duel.json", "w", encoding="utf-8") as f:
                     json.dump({"duelPool": duelPool}, f)
@@ -397,6 +413,8 @@ def do_duel(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
                         bot.send_group_msg(group=msg.group, msg="你不能取消自己发起的取消申请")
                         return
                     if msgchain[2] == "accept":
+                        print(
+                            f"Duel canceled:\nSender | Receiver : {duel['sender']} | {duel['receiver']}\nProblem: {duel['problem']}")
                         duelPool.remove(duel)
                         with open(r"data/duel.json", "w", encoding="utf-8") as f:
                             json.dump({"duelPool": duelPool}, f)
@@ -448,6 +466,7 @@ def do_today(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
         if msg.sender not in admin:
             bot.send_group_msg(group=msg.group, msg="权限不足")
             return
+        print(f"Locking today's report | OK {time.strftime('%m-%d %H:%M', time.localtime())}")
         TodayLocker["status"] = True
         TodayLocker["timestamp"] = int(time.time())
         bot.send_group_msg(group=msg.group, msg="封榜操作成功")
@@ -456,6 +475,7 @@ def do_today(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
         if msg.sender not in admin:
             bot.send_group_msg(group=msg.group, msg="权限不足")
             return
+        print(f"Unlocking today's report | OK")
         TodayLocker["status"] = False
         bot.send_group_msg(group=msg.group, msg="解除封榜操作成功")
         return
@@ -489,6 +509,7 @@ def do_today(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
                                    msg=f"正在生成报告，已完成 {now}/{len(accounts)} ({math.floor(now / len(accounts) * 100)}%)")
                 time.sleep(2)
             rank = sorted(allpoints.items(), key=lambda x: x[1], reverse=True)
+            print(f"Report generated | OK {time.strftime('%m-%d %H:%M', time.localtime())} ({len(rank)} users)")
             ret = "今日做题情况报告：\n"
             if TodayLocker["status"]:
                 ret += f"报告生成时间：{time.strftime('%m-%d %H:%M', time.localtime(TodayLocker['timestamp']))}（已封榜）\n\n"
