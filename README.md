@@ -23,8 +23,11 @@
 
 ### Essentials 模块
 1. /hello：检查 Bot 存活性
-2. /test：检查网络连接，防止洛谷日爆
-3. /about：版本信息
+2. /admin list：查看管理员列表
+3. /admin add @user：添加管理员
+4. /admin remove @user：移除管理员
+5. /test：检查网络连接，防止洛谷日爆
+6. /about：版本信息
 
 ### GPT-Plug 模块
 输入 “> ” + 问题（尖括号右侧有一个空格）向 ChatGPT 提问\
