@@ -25,7 +25,7 @@
 1. /hello：检查 Bot 存活性
 2. /admin list：查看管理员列表
 3. /admin add @user：添加管理员
-4. /admin remove @user：移除管理员
+4. /admin del @user：移除管理员
 5. /test：检查网络连接，防止洛谷日爆
 6. /about：版本信息
 
