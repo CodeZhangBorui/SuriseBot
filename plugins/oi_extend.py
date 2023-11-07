@@ -5,6 +5,7 @@ import time
 
 import miraicle
 import requests
+import colorama
 
 requests = requests.Session()
 requests.trust_env = False
@@ -35,18 +36,20 @@ with open("config/admin.json", "r", encoding='utf-8') as f:
 
 
 # Define basic functions
+def log(msg, end='\n'):
+    print(f"{colorama.Fore.YELLOW}{msg}{colorama.Style.RESET_ALL}", end=end)
 def get_today_timestamp():
     import time
     return int(time.time()) - int(time.time()) % 86400 - 28000
 
 
 def get_record_list(uid, pid=None):
-    print(f"Getting record list of {uid}", end="")
+    log(f"Getting record list of {uid}", end="")
     if pid is None:
         url = f"https://www.luogu.com.cn/record/list?_contentOnly&user={uid}"
     else:
         url = f"https://www.luogu.com.cn/record/list?_contentOnly&user={uid}&pid={pid}"
-        print(f" for {pid}", end="")
+        log(f" for {pid}", end="")
     rlist = []
     for i in range(3):
         try:
@@ -58,9 +61,9 @@ def get_record_list(uid, pid=None):
                 cookies=LoginCredit,
             ).json()
         except:
-            print(f"Failed to get [{url}&page={i + 1}], page not found?")
+            log(f"Failed to get [{url}&page={i + 1}], page not found?")
         rlist.extend(res["currentData"]["records"]["result"])
-    print(f" | OK {len(rlist)} record(s)")
+    log(f" | OK {len(rlist)} record(s)")
     return rlist
 
 
@@ -72,14 +75,14 @@ def elo_rating(ra, rb, sa):
 
 
 def rlist_unique(rlist):
-    print("Unique and filter AC records", end="")
+    log("Unique and filter AC records", end="")
     unique = []
     seen_pids = set()
     for item in rlist:
         if item["status"] == 12 and item["problem"]["pid"] not in seen_pids:
             seen_pids.add(item["problem"]["pid"])
             unique.append(item)
-    print(f" | OK {len(unique)} record(s)")
+    log(f" | OK {len(unique)} record(s)")
     return unique
 
 
@@ -100,7 +103,7 @@ def do_duel(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
         if len(msgchain) < 3:
             bot.send_group_msg(group=msg.group, msg="参数错误：/duel bind <洛谷 UID>")
             return
-        print(f"Binding @{msg.sender} to {msgchain[2]}", end="")
+        log(f"Binding @{msg.sender} to {msgchain[2]}", end="")
         res = requests.get(
             f"https://www.luogu.com.cn/user/{msgchain[2]}",
             headers={"User-Agent": DefaultUA, "x-luogu-type": "content-only"},
@@ -113,20 +116,20 @@ def do_duel(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
                 rating[str(msg.sender)] = 1400
                 with open(r"data/rating.json", "w", encoding="utf-8") as f:
                     json.dump(rating, f)
-            print(f" | OK Username is {res['currentData']['user']['name']}")
+            log(f" | OK Username is {res['currentData']['user']['name']}")
             bot.send_group_msg(
                 group=msg.group,
                 msg="绑定成功，你的洛谷用户名为 " + res["currentData"]["user"]["name"],
             )
         else:
-            print(f" | Unaccepted user introduction:\n{res['currentData']['user']['introduction']}")
+            log(f" | Unaccepted user introduction:\n{res['currentData']['user']['introduction']}")
             bot.send_group_msg(
                 group=msg.group,
                 msg=f"你正在绑定账号 {msgchain[2]}，请在个人介绍开头处顶格填入你的 QQ 号，然后再次输入 /duel bind <洛谷 UID> 完成绑定。绑定完成后，你可以将添加的 QQ 号删除。",
             )
         return
     if msgchain[1] in ["list", "ls", "lis", "lt"]:
-        print(f"Listing duel pool | OK {len(duelPool)} Duel(s)")
+        log(f"Listing duel pool | OK {len(duelPool)} Duel(s)")
         ret = "当前正在进行的对战：\n\n"
         now = time.time()
         for duel in duelPool:
@@ -141,7 +144,7 @@ def do_duel(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
         bot.send_group_msg(group=msg.group, msg=ret)
         return
     if msgchain[1] in ["rank", "rk", "rak"]:
-        print(f"Listing duel rank | OK {len(rating)} Rating(s)")
+        log(f"Listing duel rank | OK {len(rating)} Rating(s)")
         rank = sorted(rating.items(), key=lambda x: x[1], reverse=True)
         ret = "Duel Rating 排行榜：\n"
         now = 1
@@ -162,7 +165,7 @@ def do_duel(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
             return
         with open(r"data/cfrate.json", "r", encoding="utf-8") as f:
             problem = random.choice(json.load(f)[msgchain[2]])
-        print(f"Choose a problem for @{msg.sender} | OK {problem['name']}")
+        log(f"Choose a problem for @{msg.sender} | OK {problem['name']}")
         bot.send_group_msg(
             group=msg.group,
             msg=[
@@ -206,7 +209,7 @@ def do_duel(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
             return
         with open(r"data/cfrate.json", "r", encoding="utf-8") as f:
             problem = random.choice(json.load(f)[msgchain[3]])
-        print(f"Choose a problem for the new duel:\n{problem}")
+        log(f"Choose a problem for the new duel:\n{problem}")
         duel = {
             "sender": msg.sender,
             "receiver": msg.chain[1].qq,
@@ -218,7 +221,7 @@ def do_duel(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
         duelPool.append(duel)
         with open(r"data/duel.json", "w", encoding="utf-8") as f:
             json.dump({"duelPool": duelPool}, f)
-        print(
+        log(
             f"New duel invitation created:\nSender | Receiver : {duel['sender']} | {duel['receiver']}\nProblem: {duel['problem']}")
         bot.send_group_msg(
             group=msg.group,
@@ -232,7 +235,7 @@ def do_duel(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
     if msgchain[1] in ["accept"]:
         for duel in duelPool:
             if duel["receiver"] == msg.sender and duel["status"] == 1:
-                print(
+                log(
                     f"Duel accepted:\nSender | Receiver : {duel['sender']} | {duel['receiver']}\nProblem: {duel['problem']}")
                 duel["status"] = 2
                 duel["timestamp"] = int(time.time())
@@ -251,7 +254,7 @@ def do_duel(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
     if msgchain[1] in ["reject"]:
         for duel in duelPool:
             if duel["receiver"] == msg.sender and duel["status"] == 1:
-                print(
+                log(
                     f"Duel rejected:\nSender | Receiver : {duel['sender']} | {duel['receiver']}\nProblem: {duel['problem']}")
                 duelPool.remove(duel)
                 with open(r"data/duel.json", "w", encoding="utf-8") as f:
@@ -296,7 +299,7 @@ def do_duel(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
                         now = time.time()
                         hours = int((now - duel["timestamp"]) / 3600)
                         minutes = int((now - duel["timestamp"]) / 60 - hours * 60)
-                        print(
+                        log(
                             f"Duel finished:\nSender | Receiver : {duel['sender']} | {duel['receiver']}\nProblem: {duel['problem']}\nTime: {hours}h {minutes}m\nRating: {elo_a} | {elo_b}")
                         bot.send_group_msg(
                             group=msg.group,
@@ -339,7 +342,7 @@ def do_duel(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
                         duel.remove("operator")
                         with open(r"data/duel.json", "w", encoding="utf-8") as f:
                             json.dump({"duelPool": duelPool}, f)
-                        print(
+                        log(
                             f"New problem for the duel:\nSender | Receiver : {duel['sender']} | {duel['receiver']}\nProblem: {duel['problem']}")
                         bot.send_group_msg(
                             group=msg.group,
@@ -382,7 +385,7 @@ def do_duel(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
     if msgchain[1] in ["giveup"]:
         for duel in duelPool:
             if duel["sender"] == msg.sender or duel["receiver"] == msg.sender:
-                print(
+                log(
                     f"Duel given up:\nSender | Receiver : {duel['sender']} | {duel['receiver']}\nProblem: {duel['problem']}")
                 duelPool.remove(duel)
                 with open(r"data/duel.json", "w", encoding="utf-8") as f:
@@ -413,7 +416,7 @@ def do_duel(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
                         bot.send_group_msg(group=msg.group, msg="你不能取消自己发起的取消申请")
                         return
                     if msgchain[2] == "accept":
-                        print(
+                        log(
                             f"Duel canceled:\nSender | Receiver : {duel['sender']} | {duel['receiver']}\nProblem: {duel['problem']}")
                         duelPool.remove(duel)
                         with open(r"data/duel.json", "w", encoding="utf-8") as f:
@@ -454,7 +457,7 @@ def do_duel(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
         return
 
 
-def do_today(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
+def do_today_group(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
     msgchain = msg.plain.split(" ")
     if len(msgchain) < 2:
         bot.send_group_msg(
@@ -466,7 +469,7 @@ def do_today(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
         if msg.sender not in admin:
             bot.send_group_msg(group=msg.group, msg="权限不足")
             return
-        print(f"Locking today's report | OK {time.strftime('%m-%d %H:%M', time.localtime())}")
+        log(f"Locking today's report | OK {time.strftime('%m-%d %H:%M', time.localtime())}")
         TodayLocker["status"] = True
         TodayLocker["timestamp"] = int(time.time())
         bot.send_group_msg(group=msg.group, msg="封榜操作成功")
@@ -475,7 +478,7 @@ def do_today(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
         if msg.sender not in admin:
             bot.send_group_msg(group=msg.group, msg="权限不足")
             return
-        print(f"Unlocking today's report | OK")
+        log(f"Unlocking today's report | OK")
         TodayLocker["status"] = False
         bot.send_group_msg(group=msg.group, msg="解除封榜操作成功")
         return
@@ -504,12 +507,12 @@ def do_today(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
                     tot += 1
                 allpoints[qq] = points
                 now += 1
-                print(f"Generating report, completed {now}/{len(accounts)}")
-                bot.send_group_msg(group=msg.group,
-                                   msg=f"正在生成报告，已完成 {now}/{len(accounts)} ({math.floor(now / len(accounts) * 100)}%)")
+                # bot.send_group_msg(group=msg.group,
+                #                    msg=f"正在生成报告，已完成 {now}/{len(accounts)} ({math.floor(now / len(accounts) * 100)}%)")
                 time.sleep(2)
+                log(f"Report generating | {now}/{len(accounts)} ({math.floor(now / len(accounts) * 100)}%)")
             rank = sorted(allpoints.items(), key=lambda x: x[1], reverse=True)
-            print(f"Report generated | OK {time.strftime('%m-%d %H:%M', time.localtime())} ({len(rank)} users)")
+            log(f"Report generated | OK {time.strftime('%m-%d %H:%M', time.localtime())} ({len(rank)} users)")
             ret = "今日做题情况报告：\n"
             if TodayLocker["status"]:
                 ret += f"报告生成时间：{time.strftime('%m-%d %H:%M', time.localtime(TodayLocker['timestamp']))}（已封榜）\n\n"
@@ -534,7 +537,7 @@ def do_today(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
         except Exception as e:
             ProcessLocker = False
             bot.send_group_msg(group=msg.group, msg="生成报告失败")
-            print(e)
+            log(e)
         return
     if len(msg.chain) < 2 or type(msg.chain[1]) != miraicle.message.At:
         bot.send_group_msg(
@@ -586,15 +589,102 @@ def do_today(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
     bot.send_group_msg(group=msg.group, msg=ret)
 
 
+def do_today_friend(bot: miraicle.Mirai, msg: miraicle.FriendMessage):
+    msgchain = msg.plain.split(" ")
+    if len(msgchain) < 2:
+        bot.send_friend_msg(
+            qq=msg.sender,
+            msg="OI-Extend Today Module v1.0.0\n键入 /today report 获取所有人今日做题情况",
+        )
+        return
+    if msgchain[1] in ["lock"]:
+        if msg.sender not in admin:
+            bot.send_friend_msg(qq=msg.sender, msg="权限不足")
+            return
+        log(f"Locking today's report | OK {time.strftime('%m-%d %H:%M', time.localtime())}")
+        TodayLocker["status"] = True
+        TodayLocker["timestamp"] = int(time.time())
+        bot.send_friend_msg(qq=msg.sender, msg="封榜操作成功")
+        return
+    if msgchain[1] in ["unlock"]:
+        if msg.sender not in admin:
+            bot.send_friend_msg(qq=msg.sender, msg="权限不足")
+            return
+        log(f"Unlocking today's report | OK")
+        TodayLocker["status"] = False
+        bot.send_friend_msg(qq=msg.sender, msg="解除封榜操作成功")
+        return
+    if msgchain[1] in ["report", "rp"]:
+        global ProcessLocker
+        ProcessLocker = True
+        try:
+            bot.send_friend_msg(qq=msg.sender, msg="正在生成报告，大约需要 30 秒甚至更久，请稍后...")
+            today = get_today_timestamp()
+            diff2points = [3, 1, 1, 2, 3, 5, 7, 10]
+            now = 0
+            allpoints = {}
+            for qq in accounts:
+                rlist = get_record_list(accounts[qq])
+                tot = 0
+                points = 0
+                rlist = rlist_unique(rlist)
+                for record in rlist:
+                    if record["submitTime"] < today:
+                        break
+                    if TodayLocker["status"] is True and record["submitTime"] > TodayLocker["timestamp"]:
+                        continue
+                    if record["problem"]["type"] == "U" or record["problem"]["type"] == "T":
+                        continue
+                    points += diff2points[record["problem"]["difficulty"]]
+                    tot += 1
+                allpoints[qq] = points
+                now += 1
+                # bot.send_group_msg(group=msg.group,
+                #                    msg=f"正在生成报告，已完成 {now}/{len(accounts)} ({math.floor(now / len(accounts) * 100)}%)")
+                time.sleep(2)
+                log(f"Report generating | {now}/{len(accounts)} ({math.floor(now / len(accounts) * 100)}%)")
+            rank = sorted(allpoints.items(), key=lambda x: x[1], reverse=True)
+            log(f"Report generated | OK {time.strftime('%m-%d %H:%M', time.localtime())} ({len(rank)} users)")
+            ret = "今日做题情况报告：\n"
+            if TodayLocker["status"]:
+                ret += f"报告生成时间：{time.strftime('%m-%d %H:%M', time.localtime(TodayLocker['timestamp']))}（已封榜）\n\n"
+            else:
+                ret += f"报告生成时间：{time.strftime('%m-%d %H:%M', time.localtime())}\n\n"
+            now = 1
+            for rk in rank:
+                if rk[1] == 0:
+                    ret += f"{now} | {accounts[rk[0]]} | 未做题\n"
+                else:
+                    if now == 1:
+                        ret += f"{now} | {accounts[rk[0]]} | {rk[1]} 🥇\n"
+                    elif now == 2:
+                        ret += f"{now} | {accounts[rk[0]]} | {rk[1]} 🥈\n"
+                    elif now == 3:
+                        ret += f"{now} | {accounts[rk[0]]} | {rk[1]} 🥉\n"
+                    else:
+                        ret += f"{now} | {accounts[rk[0]]} | {rk[1]}\n"
+                now += 1
+            ProcessLocker = False
+            bot.send_friend_msg(qq=msg.sender, msg=ret)
+        except Exception as e:
+            ProcessLocker = False
+            bot.send_friend_msg(qq=msg.sender, msg="生成报告失败")
+            log(e)
+        return
+    if len(msg.chain) < 2 or type(msg.chain[1]) != miraicle.message.At:
+        bot.send_friend_msg(
+            qq=msg.sender,
+            msg="OI-Extend Today Module v1.0.0 (Friend Mode)\n键入 /today report 获取所有人今日做题情况",
+        )
+        return
+
+
 @miraicle.Mirai.receiver("GroupMessage")
 def oi_extend(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
     if not msg.plain.startswith("/"):
         return
     msgchain = msg.plain.split(" ")
-    print(f"Proceed Command:{msgchain}")
-    if msg.plain.startswith("/") and ProcessLocker is True:
-        bot.send_group_msg(group=msg.group, msg="正在处理一个任务，请等待任务完成后重试")
-        return
+    log(f"Proceed Command:{msgchain}")
     if msgchain[0] == "/oi_extend":
         if len(msgchain) < 2:
             bot.send_group_msg(
@@ -621,4 +711,41 @@ def oi_extend(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
     if msgchain[0] in ["/duel"]:
         do_duel(bot, msg)
     if msgchain[0] in ["/today", "/td", "/tod"]:
-        do_today(bot, msg)
+        if ProcessLocker is True:
+            bot.send_group_msg(group=msg.group, msg="正在处理一个任务，请等待任务完成后重试")
+            return
+        do_today_group(bot, msg)
+
+@miraicle.Mirai.receiver("FriendMessage")
+def oi_extend_friend(bot: miraicle.Mirai, msg: miraicle.FriendMessage):
+    if not msg.plain.startswith("/"):
+        return
+    msgchain = msg.plain.split(" ")
+    log(f"Proceed Command:{msgchain}")
+    if msgchain[0] == "/oi_extend":
+        if len(msgchain) < 2:
+            bot.send_friend_msg(
+                qq=msg.sender,
+                msg="/duel - OI-Extend Duel Module v1.2.1\n/today - OI-Extend Today Module v1.0.0",
+            )
+            return
+        if msgchain[1] == "reload":
+            # Reload all data and config from files
+            global accounts, duelPool, rating, admin
+            with open(r"data/accounts.json", "r", encoding="utf-8") as f:
+                accounts = json.load(f)
+            with open(r"data/duel.json", "r", encoding="utf-8") as f:
+                duelPool = json.load(f)["duelPool"]
+            with open(r"data/rating.json", "r", encoding="utf-8") as f:
+                rating = json.load(f)
+            with open(r"config/admin.json", "r", encoding='utf-8') as f:
+                admin = json.load(f)["list"]
+            bot.send_friend_msg(
+                qq=msg.sender,
+                msg="已重新加载所有数据和配置",
+            )
+    if msgchain[0] in ["/today", "/td", "/tod"]:
+        if ProcessLocker is True:
+            bot.send_friend_msg(qq=msg.sender, msg="正在处理一个任务，请等待任务完成后重试")
+            return
+        do_today_friend(bot, msg)

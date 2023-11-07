@@ -9,15 +9,15 @@ with open(r"config/admin.json", "r", encoding='utf-8') as f:
 @miraicle.Mirai.filter('GroupSwitchFilter')
 def switcher(bot: miraicle.Mirai, msg: miraicle.GroupMessage, flt: miraicle.GroupSwitchFilter):
     msgchain = msg.plain.split(' ')
-    if msgchain[0] == "/help":
-        ret = ""
-        for feature in flt.funcs_info(msg.group):
-            if feature['enabled']:
-                ret += f"- {feature['func']} (/{feature['func']})\n"
-        bot.send_group_msg(
-            group=msg.group,
-            msg="已启用的模块列表：\n" + ret
-        )
+    # if msgchain[0] == "/help":
+    #     ret = ""
+    #     for feature in flt.funcs_info(msg.group):
+    #         if feature['enabled']:
+    #             ret += f"- {feature['func']} (/{feature['func']})\n"
+    #     bot.send_group_msg(
+    #         group=msg.group,
+    #         msg="已启用的模块列表：\n" + ret
+    #     )
     if not msg.sender in admin:
         return
     if msgchain[0] == '/switcher':
