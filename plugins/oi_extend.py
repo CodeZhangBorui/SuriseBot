@@ -617,6 +617,11 @@ def do_today_friend(bot: miraicle.Mirai, msg: miraicle.FriendMessage):
     if msgchain[1] in ["report", "rp"]:
         global ProcessLocker
         ProcessLocker = True
+        if len(msgchain) == 3 and msgchain[2] in ["force"]:
+            bot.send_friend_msg(qq=msg.sender, msg="忽略封榜状态……")
+            uselocker = False
+        else:
+            uselocker = True
         try:
             bot.send_friend_msg(qq=msg.sender, msg="正在生成报告，大约需要 30 秒甚至更久，请稍后...")
             today = get_today_timestamp()
@@ -631,7 +636,7 @@ def do_today_friend(bot: miraicle.Mirai, msg: miraicle.FriendMessage):
                 for record in rlist:
                     if record["submitTime"] < today:
                         break
-                    if TodayLocker["status"] is True and record["submitTime"] > TodayLocker["timestamp"]:
+                    if TodayLocker["status"] is True and record["submitTime"] > TodayLocker["timestamp"] and uselocker is True:
                         continue
                     if record["problem"]["type"] == "U" or record["problem"]["type"] == "T":
                         continue
@@ -646,7 +651,7 @@ def do_today_friend(bot: miraicle.Mirai, msg: miraicle.FriendMessage):
             rank = sorted(allpoints.items(), key=lambda x: x[1], reverse=True)
             log(f"Report generated | OK {time.strftime('%m-%d %H:%M', time.localtime())} ({len(rank)} users)")
             ret = "今日做题情况报告：\n"
-            if TodayLocker["status"]:
+            if TodayLocker["status"] and uselocker is True:
                 ret += f"报告生成时间：{time.strftime('%m-%d %H:%M', time.localtime(TodayLocker['timestamp']))}（已封榜）\n\n"
             else:
                 ret += f"报告生成时间：{time.strftime('%m-%d %H:%M', time.localtime())}\n\n"
