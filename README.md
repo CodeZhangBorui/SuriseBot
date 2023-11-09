@@ -43,12 +43,23 @@ pip install -r requirements.txt
 
 ### 2. 配置
 
-打开 bot.py，修改以下内容：
+打开 `bot.py`，修改以下内容：
 
 ```python
 qq = 2752038425 # 机器人 QQ 号
 verify_key = 'd92n3duch23h' # mirai-api-http 密钥
 port = 8081 # # mirai-api-http 的 HTTP 服务端口
+```
+
+打开 `config/luogu.json`，修改以下内容
+
+```json
+{
+  "account": {
+    "_uid": "洛谷登录 Cookie 中的 _uid",
+    "__client_id": "洛谷登录 Cookie 中的 __client_id"
+  }
+}
 ```
 
 ### 3. 运行
