@@ -3,10 +3,11 @@ import math
 import random
 import time
 
+import colorama
 import miraicle
 import requests
-import colorama
 
+# Ignore proxy
 requests = requests.Session()
 requests.trust_env = False
 
@@ -38,6 +39,8 @@ with open("config/admin.json", "r", encoding='utf-8') as f:
 # Define basic functions
 def log(msg, end='\n'):
     print(f"{colorama.Fore.YELLOW}{msg}{colorama.Style.RESET_ALL}", end=end)
+
+
 def get_today_timestamp():
     import time
     return int(time.time()) - int(time.time()) % 86400 - 28000
@@ -62,6 +65,7 @@ def get_record_list(uid, pid=None):
             ).json()
         except:
             log(f"Failed to get [{url}&page={i + 1}], page not found?")
+            res = {"currentData": {"records": {"result": []}}}
         rlist.extend(res["currentData"]["records"]["result"])
     log(f" | OK {len(rlist)} record(s)")
     return rlist
@@ -88,6 +92,73 @@ def rlist_unique(rlist):
 
 def get_counterpart(sender, duel):
     return duel["receiver"] if sender == duel["sender"] else duel["sender"]
+
+
+def reload_all():
+    global accounts, duelPool, rating, admin
+    with open(r"data/accounts.json", "r", encoding="utf-8") as f:
+        accounts = json.load(f)
+    with open(r"data/duel.json", "r", encoding="utf-8") as f:
+        duelPool = json.load(f)["duelPool"]
+    with open(r"data/rating.json", "r", encoding="utf-8") as f:
+        rating = json.load(f)
+    with open(r"config/admin.json", "r", encoding='utf-8') as f:
+        admin = json.load(f)["list"]
+
+
+def genreport(uselocker=True):
+    today = get_today_timestamp()
+    diff2points = [3, 0, 1, 2, 3, 5, 7, 10]
+    now = 0
+    allpoints = {}
+    for qq in accounts:
+        rlist = get_record_list(accounts[qq])
+        tot = 0
+        points = 0
+        rlist = rlist_unique(rlist)
+        for record in rlist:
+            if record["submitTime"] < today:
+                break
+            if TodayLocker["status"] is True and record["submitTime"] > TodayLocker["timestamp"] and uselocker is True:
+                continue
+            if record["problem"]["type"] == "U" or record["problem"]["type"] == "T":
+                continue
+            points += diff2points[record["problem"]["difficulty"]]
+            tot += 1
+        allpoints[qq] = points
+        now += 1
+        log(f"Report generating | {now}/{len(accounts)} ({math.floor(now / len(accounts) * 100)}%)")
+    rank = sorted(allpoints.items(), key=lambda x: x[1], reverse=True)
+    log(f"Report generated | OK {time.strftime('%m-%d %H:%M', time.localtime())} ({len(rank)} users)")
+    ret = "今日做题情况报告：\n"
+    if TodayLocker["status"]:
+        if uselocker is True:
+            ret += f"报告生成时间：{time.strftime('%m-%d %H:%M', time.localtime(TodayLocker['timestamp']))}（已封榜）\n\n"
+        else:
+            ret += f"报告生成时间：{time.strftime('%m-%d %H:%M', time.localtime(TodayLocker['timestamp']))}（忽略封榜）\n\n"
+    else:
+        ret += f"报告生成时间：{time.strftime('%m-%d %H:%M', time.localtime())}\n\n"
+    now = 1
+    valid = 0
+    for rk in rank:
+        if rk[1] == 0:
+            break
+        else:
+            if now == 1:
+                ret += f"{now} | {accounts[rk[0]]} | {rk[1]} 🥇\n"
+            elif now == 2:
+                ret += f"{now} | {accounts[rk[0]]} | {rk[1]} 🥈\n"
+            elif now == 3:
+                ret += f"{now} | {accounts[rk[0]]} | {rk[1]} 🥉\n"
+            else:
+                ret += f"{now} | {accounts[rk[0]]} | {rk[1]}\n"
+        now += 1
+        valid += 1
+    if valid == 0:
+        ret += "今日没有人做题"
+    elif valid < len(accounts):
+        ret += f"\n还有 {len(accounts) - valid} 人没有做题"
+    return ret
 
 
 # Define modules
@@ -487,57 +558,12 @@ def do_today_group(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
         ProcessLocker = True
         try:
             bot.send_group_msg(group=msg.group, msg="正在生成报告，大约需要 30 秒甚至更久，请稍后...")
-            today = get_today_timestamp()
-            diff2points = [3, 1, 1, 2, 3, 5, 7, 10]
-            now = 0
-            allpoints = {}
-            for qq in accounts:
-                rlist = get_record_list(accounts[qq])
-                tot = 0
-                points = 0
-                rlist = rlist_unique(rlist)
-                for record in rlist:
-                    if record["submitTime"] < today:
-                        break
-                    if TodayLocker["status"] is True and record["submitTime"] > TodayLocker["timestamp"]:
-                        continue
-                    if record["problem"]["type"] == "U" or record["problem"]["type"] == "T":
-                        continue
-                    points += diff2points[record["problem"]["difficulty"]]
-                    tot += 1
-                allpoints[qq] = points
-                now += 1
-                # bot.send_group_msg(group=msg.group,
-                #                    msg=f"正在生成报告，已完成 {now}/{len(accounts)} ({math.floor(now / len(accounts) * 100)}%)")
-                time.sleep(2)
-                log(f"Report generating | {now}/{len(accounts)} ({math.floor(now / len(accounts) * 100)}%)")
-            rank = sorted(allpoints.items(), key=lambda x: x[1], reverse=True)
-            log(f"Report generated | OK {time.strftime('%m-%d %H:%M', time.localtime())} ({len(rank)} users)")
-            ret = "今日做题情况报告：\n"
-            if TodayLocker["status"]:
-                ret += f"报告生成时间：{time.strftime('%m-%d %H:%M', time.localtime(TodayLocker['timestamp']))}（已封榜）\n\n"
-            else:
-                ret += f"报告生成时间：{time.strftime('%m-%d %H:%M', time.localtime())}\n\n"
-            now = 1
-            for rk in rank:
-                if rk[1] == 0:
-                    ret += f"{now} | {accounts[rk[0]]} | 未做题\n"
-                else:
-                    if now == 1:
-                        ret += f"{now} | {accounts[rk[0]]} | {rk[1]} 🥇\n"
-                    elif now == 2:
-                        ret += f"{now} | {accounts[rk[0]]} | {rk[1]} 🥈\n"
-                    elif now == 3:
-                        ret += f"{now} | {accounts[rk[0]]} | {rk[1]} 🥉\n"
-                    else:
-                        ret += f"{now} | {accounts[rk[0]]} | {rk[1]}\n"
-                now += 1
-            ProcessLocker = False
+            ret = genreport()
             bot.send_group_msg(group=msg.group, msg=ret)
         except Exception as e:
-            ProcessLocker = False
             bot.send_group_msg(group=msg.group, msg="生成报告失败")
             log(e)
+        ProcessLocker = False
         return
     if len(msg.chain) < 2 or type(msg.chain[1]) != miraicle.message.At:
         bot.send_group_msg(
@@ -624,51 +650,7 @@ def do_today_friend(bot: miraicle.Mirai, msg: miraicle.FriendMessage):
             uselocker = True
         try:
             bot.send_friend_msg(qq=msg.sender, msg="正在生成报告，大约需要 30 秒甚至更久，请稍后...")
-            today = get_today_timestamp()
-            diff2points = [3, 1, 1, 2, 3, 5, 7, 10]
-            now = 0
-            allpoints = {}
-            for qq in accounts:
-                rlist = get_record_list(accounts[qq])
-                tot = 0
-                points = 0
-                rlist = rlist_unique(rlist)
-                for record in rlist:
-                    if record["submitTime"] < today:
-                        break
-                    if TodayLocker["status"] is True and record["submitTime"] > TodayLocker["timestamp"] and uselocker is True:
-                        continue
-                    if record["problem"]["type"] == "U" or record["problem"]["type"] == "T":
-                        continue
-                    points += diff2points[record["problem"]["difficulty"]]
-                    tot += 1
-                allpoints[qq] = points
-                now += 1
-                # bot.send_group_msg(group=msg.group,
-                #                    msg=f"正在生成报告，已完成 {now}/{len(accounts)} ({math.floor(now / len(accounts) * 100)}%)")
-                time.sleep(2)
-                log(f"Report generating | {now}/{len(accounts)} ({math.floor(now / len(accounts) * 100)}%)")
-            rank = sorted(allpoints.items(), key=lambda x: x[1], reverse=True)
-            log(f"Report generated | OK {time.strftime('%m-%d %H:%M', time.localtime())} ({len(rank)} users)")
-            ret = "今日做题情况报告：\n"
-            if TodayLocker["status"] and uselocker is True:
-                ret += f"报告生成时间：{time.strftime('%m-%d %H:%M', time.localtime(TodayLocker['timestamp']))}（已封榜）\n\n"
-            else:
-                ret += f"报告生成时间：{time.strftime('%m-%d %H:%M', time.localtime())}\n\n"
-            now = 1
-            for rk in rank:
-                if rk[1] == 0:
-                    ret += f"{now} | {accounts[rk[0]]} | 未做题\n"
-                else:
-                    if now == 1:
-                        ret += f"{now} | {accounts[rk[0]]} | {rk[1]} 🥇\n"
-                    elif now == 2:
-                        ret += f"{now} | {accounts[rk[0]]} | {rk[1]} 🥈\n"
-                    elif now == 3:
-                        ret += f"{now} | {accounts[rk[0]]} | {rk[1]} 🥉\n"
-                    else:
-                        ret += f"{now} | {accounts[rk[0]]} | {rk[1]}\n"
-                now += 1
+            ret = genreport(uselocker)
             ProcessLocker = False
             bot.send_friend_msg(qq=msg.sender, msg=ret)
         except Exception as e:
@@ -700,15 +682,7 @@ def oi_extend(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
             return
         if msgchain[1] == "reload":
             # Reload all data and config from files
-            global accounts, duelPool, rating, admin
-            with open(r"data/accounts.json", "r", encoding="utf-8") as f:
-                accounts = json.load(f)
-            with open(r"data/duel.json", "r", encoding="utf-8") as f:
-                duelPool = json.load(f)["duelPool"]
-            with open(r"data/rating.json", "r", encoding="utf-8") as f:
-                rating = json.load(f)
-            with open(r"config/admin.json", "r", encoding='utf-8') as f:
-                admin = json.load(f)["list"]
+            reload_all()
             bot.send_group_msg(
                 group=msg.group,
                 msg="已重新加载所有数据和配置",
@@ -720,6 +694,7 @@ def oi_extend(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
             bot.send_group_msg(group=msg.group, msg="正在处理一个任务，请等待任务完成后重试")
             return
         do_today_group(bot, msg)
+
 
 @miraicle.Mirai.receiver("FriendMessage")
 def oi_extend_friend(bot: miraicle.Mirai, msg: miraicle.FriendMessage):
@@ -736,15 +711,7 @@ def oi_extend_friend(bot: miraicle.Mirai, msg: miraicle.FriendMessage):
             return
         if msgchain[1] == "reload":
             # Reload all data and config from files
-            global accounts, duelPool, rating, admin
-            with open(r"data/accounts.json", "r", encoding="utf-8") as f:
-                accounts = json.load(f)
-            with open(r"data/duel.json", "r", encoding="utf-8") as f:
-                duelPool = json.load(f)["duelPool"]
-            with open(r"data/rating.json", "r", encoding="utf-8") as f:
-                rating = json.load(f)
-            with open(r"config/admin.json", "r", encoding='utf-8') as f:
-                admin = json.load(f)["list"]
+            reload_all()
             bot.send_friend_msg(
                 qq=msg.sender,
                 msg="已重新加载所有数据和配置",
