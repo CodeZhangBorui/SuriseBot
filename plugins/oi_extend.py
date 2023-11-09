@@ -12,16 +12,15 @@ requests = requests.Session()
 requests.trust_env = False
 
 # Define global variables and load data
-LoginCredit = {
-    "_uid": "1175133",
-    "__client_id": "854de38a4173fdc5651ae74b37eb5f56701f3a3b",
-}
 DefaultUA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36 Edg/118.0.2088.57"
 ProcessLocker = False
 TodayLocker = {
     "status": False,
     "timestamp": 0,
 }
+
+with open("config/luogu.json", "r", encoding="utf-8") as f:
+    LoginCredit = json.load(f)["account"]
 
 with open("data/accounts.json", "r", encoding="utf-8") as f:
     accounts = json.load(f)
