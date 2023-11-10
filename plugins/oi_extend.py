@@ -248,7 +248,7 @@ def do_duel(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
         if len(msgchain) != 4:
             bot.send_group_msg(group=msg.group, msg="参数错误：/duel begin @user rating")
             return
-        if len(msg.chain[1]) < 2 or msg.chain[1] is not miraicle.message.At:
+        if len(msgchain) < 2 or type(msg.chain[1]) != miraicle.message.At:
             bot.send_group_msg(group=msg.group, msg="你需要 @对方 来开始对战")
             return
         if (
@@ -265,7 +265,10 @@ def do_duel(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
                 )
                 return
         if msg.sender == msg.chain[1].qq:
-            bot.send_group_msg(group=msg.group, msg="418 I'm a teapot: 你不能给自己倒茶")
+            bot.send_group_msg(group=msg.group, msg=miraicle.Image.from_base64(
+                base64='images/418_im_a_teapot.jpg'
+            ))
+            bot.send_group_msg(group=msg.group, msg="你不能 Duel 你自己")
             return
         if not str(msg.sender) in accounts:
             bot.send_group_msg(
@@ -560,7 +563,11 @@ def do_today_group(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
             ret = genreport()
             bot.send_group_msg(group=msg.group, msg=ret)
         except Exception as e:
+            bot.send_group_msg(group=msg.group, msg=miraicle.Image.from_base64(
+                base64='images/504_gateway_timeout.jpg'
+            ))
             bot.send_group_msg(group=msg.group, msg="生成报告失败")
+            print("")
             log(e)
         ProcessLocker = False
         return
@@ -650,12 +657,15 @@ def do_today_friend(bot: miraicle.Mirai, msg: miraicle.FriendMessage):
         try:
             bot.send_friend_msg(qq=msg.sender, msg="正在生成报告，大约需要 30 秒甚至更久，请稍后...")
             ret = genreport(uselocker)
-            ProcessLocker = False
             bot.send_friend_msg(qq=msg.sender, msg=ret)
         except Exception as e:
-            ProcessLocker = False
+            bot.send_group_msg(group=msg.group, msg=miraicle.Image.from_base64(
+                base64='images/504_gateway_timeout.jpg'
+            ))
             bot.send_friend_msg(qq=msg.sender, msg="生成报告失败")
+            print("")
             log(e)
+        ProcessLocker = False
         return
     if len(msg.chain) < 2 or type(msg.chain[1]) != miraicle.message.At:
         bot.send_friend_msg(
@@ -663,6 +673,10 @@ def do_today_friend(bot: miraicle.Mirai, msg: miraicle.FriendMessage):
             msg="OI-Extend Today Module v1.0.0 (Friend Mode)\n键入 /today report 获取所有人今日做题情况",
         )
         return
+
+
+log(f"OI-Extend Loaded")
+log(f"Login via uid {LoginCredit['_uid']} client_id {LoginCredit['__client_id']}")
 
 
 @miraicle.Mirai.receiver("GroupMessage")
