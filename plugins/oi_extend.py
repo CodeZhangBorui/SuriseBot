@@ -160,6 +160,47 @@ def genreport(uselocker=True):
     return ret
 
 
+def gentoday(qq):
+    if str(qq) not in accounts:
+        return "你还没有绑定账号，输入 /duel bind <洛谷用户名> 绑定账号"
+    today = get_today_timestamp()
+    rlist = get_record_list(accounts[str(qq)])
+    ret = f"{accounts[str(qq)]} 的今日做题情况：\n"
+    if TodayLocker["status"]:
+        ret += f"报告生成时间：{time.strftime('%m-%d %H:%M', time.localtime(TodayLocker['timestamp']))}（已封榜）\n\n"
+    else:
+        ret += f"报告生成时间：{time.strftime('%m-%d %H:%M', time.localtime())}\n\n"
+    tot = 0
+    diffs = [
+        "暂未评定",
+        "入门",
+        "普及-",
+        "普及/提高-",
+        "普及+/提高",
+        "提高+/省选-",
+        "省选/NOI-",
+        "NOI/NOI+/CTSC",
+    ]
+    diff2points = [3, 0, 1, 2, 3, 5, 7, 10]
+    points = 0
+    rlist = rlist_unique(rlist)
+    for record in rlist:
+        if record["submitTime"] < today:
+            break
+        if TodayLocker["status"] is True and record["submitTime"] > TodayLocker["timestamp"]:
+            continue
+        if record["problem"]["type"] == "U" or record["problem"]["type"] == "T":
+            continue
+        ret += f"通过 {record['problem']['pid']} | 难度 {diffs[record['problem']['difficulty']]} | +{diff2points[record['problem']['difficulty']]}\n"
+        points += diff2points[record["problem"]["difficulty"]]
+        tot += 1
+    if tot == 0:
+        ret += "今日没有通过任何题目"
+    else:
+        ret += f"今日共通过 {tot} 题，积分 {points}"
+    return ret
+
+
 # Define modules
 def do_duel(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
     msgchain = msg.plain.split(" ")
@@ -571,63 +612,27 @@ def do_today_group(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
             log(e)
         ProcessLocker = False
         return
-    if len(msg.chain) < 2 or type(msg.chain[1]) != miraicle.message.At:
+    if type(msg.chain[1]) != miraicle.message.At:
         bot.send_group_msg(
             group=msg.group,
             msg="OI-Extend Today Module v1.0.0\n键入 /today @群成员 获取群成员今日做题情况",
         )
         return
-    if str(msg.chain[1].qq) not in accounts:
-        bot.send_group_msg(
-            group=msg.group,
-            msg="对方还没有绑定账号，输入 /duel bind <洛谷 UID> 绑定账号",
-        )
-        return
-    today = get_today_timestamp()
-    rlist = get_record_list(accounts[str(msg.chain[1].qq)])
-    ret = f"{accounts[str(msg.chain[1].qq)]} 的今日做题情况：\n"
-    if TodayLocker["status"]:
-        ret += f"报告生成时间：{time.strftime('%m-%d %H:%M', time.localtime(TodayLocker['timestamp']))}（已封榜）\n\n"
-    else:
-        ret += f"报告生成时间：{time.strftime('%m-%d %H:%M', time.localtime())}\n\n"
-    tot = 0
-    diffs = [
-        "暂未评定",
-        "入门",
-        "普及-",
-        "普及/提高-",
-        "普及+/提高",
-        "提高+/省选-",
-        "省选/NOI-",
-        "NOI/NOI+/CTSC",
-    ]
-    diff2points = [3, 0, 1, 2, 3, 5, 7, 10]
-    points = 0
-    rlist = rlist_unique(rlist)
-    for record in rlist:
-        if record["submitTime"] < today:
-            break
-        if TodayLocker["status"] is True and record["submitTime"] > TodayLocker["timestamp"]:
-            continue
-        if record["problem"]["type"] == "U" or record["problem"]["type"] == "T":
-            continue
-        ret += f"通过 {record['problem']['pid']} | 难度 {diffs[record['problem']['difficulty']]} | +{diff2points[record['problem']['difficulty']]}\n"
-        points += diff2points[record["problem"]["difficulty"]]
-        tot += 1
-    if tot == 0:
-        ret += "今日没有通过任何题目"
-    else:
-        ret += f"今日共通过 {tot} 题，积分 {points}"
+    ret = gentoday(msg.chain[1].qq)
     bot.send_group_msg(group=msg.group, msg=ret)
 
 
 def do_today_friend(bot: miraicle.Mirai, msg: miraicle.FriendMessage):
     msgchain = msg.plain.split(" ")
-    if len(msgchain) < 2:
+    if len(msgchain) > 2:
         bot.send_friend_msg(
             qq=msg.sender,
             msg="OI-Extend Today Module v1.0.0\n键入 /today report 获取所有人今日做题情况",
         )
+        return
+    if len(msgchain) < 2:
+        ret = gentoday(msg.sender)
+        bot.send_friend_msg(qq=msg.sender, msg=ret)
         return
     if msgchain[1] in ["lock"]:
         if msg.sender not in admin:
@@ -659,7 +664,7 @@ def do_today_friend(bot: miraicle.Mirai, msg: miraicle.FriendMessage):
             ret = genreport(uselocker)
             bot.send_friend_msg(qq=msg.sender, msg=ret)
         except Exception as e:
-            bot.send_group_msg(group=msg.group, msg=miraicle.Image.from_base64(
+            bot.send_friend_msg(qq=msg.sender, msg=miraicle.Image.from_base64(
                 base64='images/504_gateway_timeout.jpg'
             ))
             bot.send_friend_msg(qq=msg.sender, msg="生成报告失败")
