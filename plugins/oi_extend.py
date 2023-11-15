@@ -48,9 +48,9 @@ def get_today_timestamp():
 def get_record_list(uid, pid=None):
     log(f"Getting record list of {uid}", end="")
     if pid is None:
-        url = f"https://www.luogu.com.cn/record/list?_contentOnly&user={uid}"
+        url = f"https://www.luogu.com.cn/record/list?user={uid}"
     else:
-        url = f"https://www.luogu.com.cn/record/list?_contentOnly&user={uid}&pid={pid}"
+        url = f"https://www.luogu.com.cn/record/list?user={uid}&pid={pid}"
         log(f" for {pid}", end="")
     rlist = []
     for i in range(3):
@@ -59,6 +59,7 @@ def get_record_list(uid, pid=None):
                 f"{url}&page={i + 1}",
                 headers={
                     "User-Agent": DefaultUA,
+                    "x-luogu-type": "content-only"
                 },
                 cookies=LoginCredit,
             ).json()
@@ -103,6 +104,11 @@ def reload_all():
         rating = json.load(f)
     with open(r"config/admin.json", "r", encoding='utf-8') as f:
         admin = json.load(f)["list"]
+
+
+def randomproblem(rating):
+    with open(r"data/cfrate.json", "r", encoding="utf-8") as f:
+        return random.choice(json.load(f)[rating])
 
 
 def genreport(uselocker=True):
@@ -274,8 +280,7 @@ def do_duel(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
         ):
             bot.send_group_msg(group=msg.group, msg="Rating 需为 800 到 3500 的整百数")
             return
-        with open(r"data/cfrate.json", "r", encoding="utf-8") as f:
-            problem = random.choice(json.load(f)[msgchain[2]])
+        problem = randomproblem(msgchain[2])
         log(f"Choose a problem for @{msg.sender} | OK {problem['name']}")
         bot.send_group_msg(
             group=msg.group,
@@ -321,8 +326,7 @@ def do_duel(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
                 group=msg.group, msg="对方还没有绑定账号，输入 /duel bind <洛谷 UID> 绑定账号"
             )
             return
-        with open(r"data/cfrate.json", "r", encoding="utf-8") as f:
-            problem = random.choice(json.load(f)[msgchain[3]])
+        problem = randomproblem(msgchain[2])
         log(f"Choose a problem for the new duel:\n{problem}")
         duel = {
             "sender": msg.sender,
@@ -448,8 +452,7 @@ def do_duel(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
                         bot.send_group_msg(group=msg.group, msg="你不能接受自己的更换题目申请")
                         return
                     if msgchain[2] == "accept":
-                        with open(r"data/cfrate.json", "r", encoding="utf-8") as f:
-                            problem = random.choice(json.load(f)[str(duel["rating"])])
+                        problem = randomproblem(msgchain[2])
                         duel["problem"] = problem
                         duel["status"] = 2
                         duel["timestamp"] = int(time.time())
