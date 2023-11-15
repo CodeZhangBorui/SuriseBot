@@ -16,14 +16,14 @@ for problem in data["result"]["problems"]:
         output[rating].append({
             "pid": f"{problem['contestId']}{problem['index']}",
             "name": problem['name'],
-            "url": f"https://codeforces.com/contest/{problem['contestId']}/problem/{problem['index']}"
+            "url": f"https://www.luogu.com.cn/problem/CF{problem['contestId']}{problem['index']}"
         })
     except KeyError:
         output[rating] = [
             {
                 "pid": f"{problem['contestId']}{problem['index']}",
                 "name": problem['name'],
-                "url": f"https://codeforces.com/contest/{problem['contestId']}/problem/{problem['index']}"
+                "url": f"https://www.luogu.com.cn/problem/CF{problem['contestId']}{problem['index']}"
             }
         ]
 

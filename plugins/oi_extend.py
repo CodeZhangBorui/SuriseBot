@@ -107,8 +107,12 @@ def reload_all():
 
 
 def randomproblem(rating):
-    with open(r"data/cfrate.json", "r", encoding="utf-8") as f:
-        return random.choice(json.load(f)[rating])
+    if (int(rating) < 100):
+        with open(r"data/lgrate.json", "r", encoding="utf-8") as f:
+            return random.choice(json.load(f)[rating])
+    else:
+        with open(r"data/cfrate.json", "r", encoding="utf-8") as f:
+            return random.choice(json.load(f)[rating])
 
 
 def genreport(uselocker=True):
@@ -273,12 +277,15 @@ def do_duel(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
         if len(msgchain) != 3:
             bot.send_group_msg(group=msg.group, msg="参数错误：/duel problem <Rating>")
             return
-        if (
-                int(msgchain[2]) % 100 != 0
-                or int(msgchain[2]) < 800
-                or int(msgchain[2]) > 3500
+        if not (
+                (int(msgchain[2]) % 100 == 0
+                 and 800 <= int(msgchain[2]) <= 3500)
+                or
+                (
+                        0 <= int(msgchain[2]) <= 7
+                )
         ):
-            bot.send_group_msg(group=msg.group, msg="Rating 需为 800 到 3500 的整百数")
+            bot.send_group_msg(group=msg.group, msg="Rating 需为 800 到 3500 的整百数（Codeforces）或 0-7（洛谷）")
             return
         problem = randomproblem(msgchain[2])
         log(f"Choose a problem for @{msg.sender} | OK {problem['name']}")
@@ -286,7 +293,7 @@ def do_duel(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
             group=msg.group,
             msg=[
                 miraicle.Plain(
-                    f"题目为 {problem['pid']}\n快捷前往：https://www.luogu.com.cn/problem/CF{problem['pid']}"
+                    f"{problem['pid']} : {problem['name']}\n快捷前往：{problem['url']}"
                 ),
             ],
         )
@@ -297,12 +304,15 @@ def do_duel(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
         if len(msgchain) < 2 or type(msg.chain[1]) != miraicle.message.At:
             bot.send_group_msg(group=msg.group, msg="你需要 @对方 来开始对战")
             return
-        if (
-                int(msgchain[3]) % 100 != 0
-                or int(msgchain[3]) < 800
-                or int(msgchain[3]) > 3500
+        if not (
+                (int(msgchain[3]) % 100 == 0
+                 and 800 <= int(msgchain[3]) <= 3500)
+                or
+                (
+                        0 <= int(msgchain[3]) <= 7
+                )
         ):
-            bot.send_group_msg(group=msg.group, msg="Rating 需为 800 到 3500 的整百数")
+            bot.send_group_msg(group=msg.group, msg="Rating 需为 800 到 3500 的整百数（Codeforces）或 0-7（洛谷）")
             return
         for duel in duelPool:
             if duel["sender"] == msg.sender or duel["receiver"] == msg.sender:
@@ -363,7 +373,7 @@ def do_duel(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
                     group=msg.group,
                     msg=[
                         miraicle.Plain(
-                            f"对战开始，题目为 {duel['problem']['pid']}\n快捷前往：https://www.luogu.com.cn/problem/CF{duel['problem']['pid']}\n结算请使用 /duel judge"
+                            f"对战开始，题目为 {duel['problem']['pid']}\n快捷前往：{duel['problem']['url']}\n结算请使用 /duel judge"
                         ),
                     ],
                 )
