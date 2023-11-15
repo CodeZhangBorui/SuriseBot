@@ -106,13 +106,13 @@ def reload_all():
         admin = json.load(f)["list"]
 
 
-def randomproblem(rating):
-    if (int(rating) < 100):
+def randomproblem(inrating):
+    if int(inrating) < 100:
         with open(r"data/lgrate.json", "r", encoding="utf-8") as f:
-            return random.choice(json.load(f)[rating])
+            return random.choice(json.load(f)[inrating])
     else:
         with open(r"data/cfrate.json", "r", encoding="utf-8") as f:
-            return random.choice(json.load(f)[rating])
+            return random.choice(json.load(f)[inrating])
 
 
 def genreport(uselocker=True):
